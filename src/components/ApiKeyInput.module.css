@@ -1,0 +1,74 @@
+.container {
+  margin-bottom: 24px;
+}
+
+.label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #333;
+}
+
+.status {
+  font-size: 13px;
+  color: #22c55e;
+  margin-bottom: 8px;
+}
+
+.inputGroup {
+  display: flex;
+  gap: 8px;
+}
+
+.input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.input:disabled {
+  background-color: #f3f4f6;
+}
+
+.button {
+  padding: 8px 16px;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+.button:hover:not(:disabled) {
+  background-color: #2563eb;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.error {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #ef4444;
+}
+
+.success {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #22c55e;
+}
