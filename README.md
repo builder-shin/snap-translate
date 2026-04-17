@@ -1,42 +1,358 @@
 # Snap Translate
 
-## 프로젝트 소개
+> 📖 **Language**: **English** · [한국어](./README.ko.md)
 
-Snap Translate는 macOS와 Windows에서 사용할 수 있는 가볍고 빠른 번역 도구입니다. DeepL API를 활용하여 어떤 애플리케이션에서든 텍스트를 선택하고 글로벌 단축키를 누르면 즉시 번역 결과를 받을 수 있습니다.
+A lightweight, keyboard-first translation tool for macOS and Windows. Select text in any application, press a global hotkey, and get an instant DeepL translation copied to your clipboard — without ever leaving your workflow.
 
-Tauri 2.x 프레임워크로 제작되어 네이티브 성능과 작은 용량을 자랑하며, 시스템 트레이에 상주하여 필요할 때마다 빠르게 사용할 수 있습니다. 번역된 텍스트는 자동으로 클립보드에 복사되며, 데스크톱 알림으로 결과를 확인할 수 있습니다.
+![platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey)
+![framework](https://img.shields.io/badge/framework-Tauri%202-blue)
+![license](https://img.shields.io/badge/license-MIT-green)
 
-**주요 기능:**
-- 시스템 트레이 상주형 앱
-- 글로벌 단축키: `Cmd+Shift+D` (macOS) / `Ctrl+Shift+D` (Windows)
-- DeepL API 연동 및 자동 재시도
-- 클립보드 백업 및 복원 기능
-- OS Keychain을 통한 API 키 안전 저장
-- 다국어 번역 지원 (한국어, 영어, 일본어, 중국어 간체/번체, 독일어, 프랑스어, 스페인어, 포르투갈어, 러시아어)
-- 데스크톱 알림을 통한 번역 결과 및 오류 표시
-- 일별 로그 파일 자동 관리
+---
 
-**필수 요구사항:**
-- DeepL API 키 (무료 또는 유료) - https://www.deepl.com/pro-api 에서 발급
-- macOS 10.15+ 또는 Windows 10+
-- macOS의 경우 접근성 권한 필요 (첫 실행 시 안내)
+## Table of Contents
 
-## 사용 방법
+- [Why Snap Translate?](#why-snap-translate)
+- [Features](#features)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Getting Started](#getting-started)
+- [How to Use](#how-to-use)
+- [Configuration](#configuration)
+- [Troubleshooting](#troubleshooting)
+- [Architecture](#architecture)
+- [Development](#development)
+- [Security & Privacy](#security--privacy)
+- [License](#license)
 
-1. **DeepL API 키 발급**
-   - https://www.deepl.com/pro-api 에서 무료 또는 유료 API 키를 발급받습니다.
+---
 
-2. **앱 설치 및 실행**
-   - 설치 후 앱을 실행하면 시스템 트레이에 아이콘이 표시됩니다.
-   - macOS의 경우 첫 실행 시 접근성 권한 허용이 필요합니다.
+## Why Snap Translate?
 
-3. **설정**
-   - 트레이 아이콘을 클릭하거나 메뉴에서 "설정"을 선택합니다.
-   - DeepL API 키를 입력합니다 (입력 시 유효성 검사 진행).
-   - 원하는 번역 대상 언어를 선택합니다 (기본값: 한국어).
+Most translation tools are built as separate apps or browser extensions, forcing you to **context-switch**: copy the text, open a new window, paste, click translate, read the result, and switch back. That friction adds up — especially when you read documentation, emails, or code comments in languages you do not speak fluently.
 
-4. **번역하기**
-   - 어떤 애플리케이션에서든 번역하고 싶은 텍스트를 선택합니다.
-   - `Cmd+Shift+D` (macOS) 또는 `Ctrl+Shift+D` (Windows)를 누릅니다.
-   - 번역이 완료되면 클립보드에 번역된 텍스트가 복사되고, 데스크톱 알림으로 결과를 확인할 수 있습니다.
-   - 원본 클립보드 내용은 자동으로 백업 및 복원됩니다.
+**Snap Translate was built to remove that friction entirely.**
+
+### Design Goals
+
+1. **Zero context switching** — The tool lives in your system tray. You never see a new window unless you need to change settings.
+2. **One-shot workflow** — Select text → press one hotkey → the translation is in your clipboard. That is the entire interaction.
+3. **Works everywhere** — Because it simulates `Cmd+C` / `Ctrl+C` on the active selection, it works in any native app, any browser, any terminal, any IDE. No per-app integration needed.
+4. **Respect the clipboard** — Your original clipboard content is backed up before the translation runs and restored automatically afterward, so this tool never silently destroys what you had copied.
+5. **Native performance, small footprint** — Built on Tauri 2 with a Rust backend. Idle RAM usage is a fraction of equivalent Electron apps and startup is instant.
+6. **Secure by default** — Your DeepL API key is stored in the OS keychain (macOS Keychain / Windows Credential Manager), never in a plain-text config file.
+
+### Who Is It For?
+
+- Developers reading English documentation, stack traces, or GitHub issues.
+- Researchers skimming foreign-language papers and sources.
+- Anyone who reads emails, articles, or messages across languages several times a day.
+- Users who prefer **keyboard-driven, distraction-free tools** over bloated GUIs.
+
+### Why DeepL?
+
+DeepL consistently produces more natural, context-aware translations than most alternatives, particularly for European and East Asian languages. It also offers a generous free tier (500,000 characters/month) that covers most individual usage. Snap Translate auto-detects whether you are using a free (`:fx` suffix) or pro API key and routes requests to the correct endpoint.
+
+---
+
+## Features
+
+- 🖱️ **System tray resident** — No window taking up screen space.
+- ⌨️ **Global hotkey** — `Cmd+Shift+D` (macOS) / `Ctrl+Shift+D` (Windows).
+- 🌐 **DeepL-powered translation** — High-quality output with automatic source-language detection.
+- 🔁 **Automatic retry** — Exponential backoff (1s → 2s → 4s → 8s) on rate limits.
+- 📋 **Clipboard backup & restore** — Your original clipboard content is never lost.
+- 🔐 **Secure API key storage** — OS-native keychain, never plain text on disk.
+- 🌍 **9 target languages** — Korean, English, Japanese, Simplified Chinese, German, French, Spanish, Brazilian Portuguese, Russian.
+- 🔔 **Desktop notifications** — See the translation preview without opening a window.
+- 📝 **Daily rolling logs** — Automatic log file management for debugging.
+- 🛡️ **Concurrency guard** — Prevents double-translation from repeated hotkey presses.
+
+---
+
+## Requirements
+
+| Requirement | Details |
+|---|---|
+| **OS** | macOS 10.15 (Catalina) or later · Windows 10 or later |
+| **DeepL API Key** | Free or Pro tier — [get one here](https://www.deepl.com/pro-api) |
+| **macOS Accessibility Permission** | Required so the app can simulate `Cmd+C` on your selection. Prompted on first launch. |
+| **Network** | Outbound HTTPS to `api.deepl.com` or `api-free.deepl.com` |
+
+---
+
+## Installation
+
+### Option A — Download a Release (recommended)
+
+Download the latest installer for your platform from the **Releases** page and run it. Both `.dmg` (macOS) and `.msi` (Windows) bundles are provided.
+
+### Option B — Build from Source
+
+See the [Development](#development) section below.
+
+---
+
+## Getting Started
+
+### 1. Get a DeepL API Key
+
+1. Sign up at [DeepL API](https://www.deepl.com/pro-api).
+2. Copy your authentication key from the account page.
+3. Keys ending in `:fx` are free-tier and use `api-free.deepl.com` automatically; keys without the suffix use `api.deepl.com`.
+
+### 2. Launch Snap Translate
+
+- On first launch, a tray icon appears in the menu bar (macOS) or system tray (Windows).
+- **macOS users**: A system dialog will request **Accessibility** permission. This is required for the app to simulate the copy shortcut on your selected text. Grant it via *System Settings → Privacy & Security → Accessibility*.
+
+### 3. Configure Your API Key
+
+1. Click the tray icon (or right-click → **Settings**).
+2. Paste your DeepL API key and click **Save**. The app validates the key against DeepL's `/v2/usage` endpoint before storing it.
+3. Select your preferred target language from the dropdown.
+
+### 4. Translate Anything
+
+- Select text anywhere — a browser, Slack, a PDF viewer, your terminal.
+- Press **`Cmd+Shift+D`** (macOS) or **`Ctrl+Shift+D`** (Windows).
+- A desktop notification shows the first 100 characters of the translation.
+- The full translation is now in your clipboard — paste it wherever you need.
+
+---
+
+## How to Use
+
+### The Core Workflow
+
+```
+  ┌────────────────────┐      ┌──────────────────┐     ┌─────────────────┐
+  │ 1. Select text in  │  →   │ 2. Press hotkey  │  →  │ 3. Paste result │
+  │    any application │      │    Cmd+Shift+D   │     │    Cmd+V        │
+  └────────────────────┘      └──────────────────┘     └─────────────────┘
+```
+
+### What Happens Under the Hood
+
+When you press the hotkey, Snap Translate performs these steps atomically:
+
+1. **Concurrency guard** — If a translation is already in progress, the new request is ignored.
+2. **Accessibility check** (macOS) — Verifies the app still has permission; re-prompts if revoked.
+3. **API key check** — Fetches your key from the OS keychain; opens Settings if missing.
+4. **Clipboard backup** — Saves your current clipboard content (text or image).
+5. **Simulated copy** — Sends `Cmd+C` / `Ctrl+C` to the focused application.
+6. **Retry-read** — Polls the clipboard at 50/100/200/400/800ms intervals for new content.
+7. **Length check** — Rejects text over 5,000 characters (DeepL's per-request limit).
+8. **Translate** — Calls DeepL `/v2/translate` with exponential-backoff retry on 429 rate limits.
+9. **Restore & replace** — Your original clipboard is restored first, then the translation is written.
+10. **Notify** — A desktop notification shows the result.
+
+If anything fails, you get a human-readable Korean notification explaining which step failed (network error, invalid key, quota exceeded, nothing selected, text too long, etc.) and your original clipboard is always restored.
+
+### Tray Menu
+
+Right-click (or click on Windows) the tray icon to access:
+
+| Item | Action |
+|---|---|
+| **설정 (Settings)** | Open the settings window |
+| **로그 열기 (Open Log)** | Open the log directory in Finder/Explorer |
+| **종료 (Quit)** | Exit the app |
+
+### Example Use Cases
+
+- **Reading docs** — Select a confusing paragraph in MDN, press the hotkey, paste into your notes.
+- **Code comments** — Translate Japanese comments in a library you are integrating.
+- **Email** — Understand a client email in German without opening a browser tab.
+- **Chat** — Quickly translate a message in Slack, Discord, or KakaoTalk.
+
+---
+
+## Configuration
+
+Settings are persisted in two places by design:
+
+| Setting | Where | Why |
+|---|---|---|
+| **DeepL API key** | OS Keychain (`service="snap-translate"`, `username="deepl-api-key"`) | Secret — must not be on disk in plaintext |
+| **Target language, hotkey** | `settings.json` in the app config directory | Non-secret preferences |
+
+**Config directory locations:**
+- macOS: `~/Library/Application Support/SnapTranslate/`
+- Windows: `%APPDATA%\SnapTranslate\`
+
+**Log directory locations** (daily-rotated files named `snap-translate.log.YYYY-MM-DD`):
+- macOS: `~/Library/Logs/SnapTranslate/`
+- Windows: `%APPDATA%\SnapTranslate\logs\`
+
+### Supported Target Languages
+
+| Code | Language |
+|---|---|
+| `KO` | Korean (한국어) — *default* |
+| `EN` | English |
+| `JA` | Japanese (日本語) |
+| `ZH` | Chinese, Simplified (简体中文) |
+| `DE` | German (Deutsch) |
+| `FR` | French (Français) |
+| `ES` | Spanish (Español) |
+| `PT` | Portuguese, Brazilian (PT-BR) |
+| `RU` | Russian (Русский) |
+
+### Changing the Hotkey
+
+Hotkey customization is planned for a future release. The current build is hard-coded to `Cmd/Ctrl+Shift+D`.
+
+---
+
+## Troubleshooting
+
+### "선택된 텍스트가 없습니다" (Nothing selected)
+
+- On macOS, verify Accessibility permission is granted under *System Settings → Privacy & Security → Accessibility*. Without it, the simulated `Cmd+C` is silently suppressed by the OS.
+- Make sure text is actually selected (highlighted) in the focused app.
+- Some apps (e.g. locked PDF viewers, DRM'd content) disable copy entirely — these cannot be translated.
+
+### "API Key가 유효하지 않습니다" (Invalid API key)
+
+- Double-check the key you pasted — free-tier keys must include the `:fx` suffix exactly as DeepL provides it.
+- Verify your DeepL account is active at [DeepL API Dashboard](https://www.deepl.com/pro-account).
+
+### "번역 할당량이 초과되었습니다" (Quota exceeded)
+
+- You have hit your DeepL character quota for the month. Free tier has 500,000 characters; Pro varies by plan.
+- Reset date is shown in your DeepL dashboard.
+
+### No notification appears
+
+- macOS: allow notifications for Snap Translate in *System Settings → Notifications*.
+- Windows: check *Settings → System → Notifications*.
+
+### Logs
+
+Open the log directory via the tray menu (**로그 열기**) and share the latest daily log if reporting an issue.
+
+---
+
+## Architecture
+
+Snap Translate is split cleanly between a **Rust backend** (Tauri) and a **React frontend** (settings UI only).
+
+```
+┌─────────────────────────────────────────────────┐
+│                  System Tray                    │
+│  [Settings]  [Open Log]  [Quit]                 │
+└─────────────┬───────────────────────────────────┘
+              │
+              ▼
+┌─────────────────────────────────────────────────┐
+│         React 19 Settings Window                │
+│  ApiKeyInput · LanguageSelect · HotkeyInput     │
+│       ↕ invoke("command_name", args)            │
+└─────────────┬───────────────────────────────────┘
+              │
+              ▼
+┌─────────────────────────────────────────────────┐
+│          Tauri 2 Rust Backend                   │
+│                                                 │
+│  Global Hotkey ──► translate_flow               │
+│     │                 │                         │
+│     ▼                 ▼                         │
+│  [Accessibility]  [Clipboard]  [KeySim]         │
+│  [ApiKeyStore]    [DeepL HTTP] [Notification]   │
+└─────────────────────────────────────────────────┘
+              │
+              ▼
+     DeepL API (free/pro auto-routed)
+```
+
+### Key Design Patterns
+
+- **Trait-based dependency injection** — Every external I/O (clipboard, HTTP, keychain, key simulation, accessibility) is behind a trait. This enables full-coverage unit testing with mocks, and makes the translate flow pure and testable.
+- **RAII guard** — `TranslationGuard` uses an `AtomicBool` to prevent concurrent translations; the flag is released via `Drop` even on panic.
+- **Typed errors** — `AppError` (thiserror-based) carries Korean user-facing messages and serializes as plain strings across the Tauri boundary.
+- **Retry with exponential backoff** — `translate_with_retry` handles only `429 Rate Limited` with 1/2/4/8s delays; other errors fail fast.
+
+For deeper documentation, see the hierarchical [`AGENTS.md`](./AGENTS.md) files throughout the repository.
+
+---
+
+## Development
+
+### Prerequisites
+
+- **Node.js** 18+ and **pnpm** 8+ (this project uses pnpm exclusively)
+- **Rust** 1.70+ (`rustup` recommended)
+- **Tauri prerequisites** for your platform — see [Tauri prerequisites guide](https://tauri.app/start/prerequisites/)
+
+### Commands
+
+```bash
+# Install frontend dependencies
+pnpm install
+
+# Run the app in development mode (hot-reload frontend + Rust)
+pnpm tauri dev
+
+# Run frontend tests (Vitest + React Testing Library + jsdom)
+pnpm test
+
+# Run Rust backend tests
+cd src-tauri && cargo test
+
+# Production build (TypeScript check + Vite bundle + Tauri bundle)
+pnpm tauri build
+```
+
+### Project Layout
+
+```
+snap-translate/
+├── src/                 # React 19 frontend (settings UI)
+│   ├── components/      # ApiKeyInput, LanguageSelect, HotkeyInput
+│   ├── pages/           # Settings page
+│   ├── lib/             # Tauri invoke wrappers, constants
+│   └── types/           # Shared TS types
+├── src-tauri/           # Rust backend
+│   └── src/
+│       ├── commands/    # #[tauri::command] endpoints
+│       ├── config/      # Keychain-based API key storage
+│       ├── deepl/       # HTTP client + retry
+│       ├── clipboard/   # Backup/restore/retry-read trait
+│       ├── key_simulator/   # Enigo Cmd+C / Ctrl+C
+│       ├── hotkey/      # Platform-specific shortcut defaults
+│       ├── accessibility/   # macOS permission check
+│       ├── translate_flow.rs # End-to-end flow (fully unit-tested)
+│       ├── errors.rs    # AppError enum
+│       └── logging.rs   # Daily-rotating tracing logs
+└── tests/               # Vitest frontend tests
+```
+
+Every directory contains an `AGENTS.md` with detailed AI-readable documentation.
+
+### Contributing
+
+1. Fork the repository and create a feature branch.
+2. Run `pnpm test` and `cargo test` before committing.
+3. For changes that touch the translation flow, add or update tests in `src-tauri/src/translate_flow.rs`.
+4. User-facing strings are in Korean — preserve that convention.
+
+---
+
+## Security & Privacy
+
+- **Your DeepL API key never leaves your machine** except in the request headers sent directly to DeepL over HTTPS.
+- **No telemetry, no analytics, no tracking.** The app makes network calls only to DeepL.
+- **No clipboard logging.** Clipboard contents are held in memory only for the duration of a single translation request.
+- **Logs contain operational metadata** (timestamps, errors, retry counts) but never translation content or API keys.
+- The API key is stored via the `keyring` crate using `apple-native` (macOS Keychain) and `windows-native` (Windows Credential Manager) backends.
+
+---
+
+## License
+
+MIT — see [LICENSE](./LICENSE) if present.
+
+---
+
+<sub>Built with [Tauri 2](https://tauri.app/), [React 19](https://react.dev/), and [DeepL](https://www.deepl.com/).</sub>
